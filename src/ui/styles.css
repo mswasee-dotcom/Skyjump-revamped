@@ -187,7 +187,7 @@ h3 { font-size: 15px; color: var(--neon); letter-spacing: 0.18em; margin: 18px 0
   padding-left: max(5vw, 20px);
 }
 .menu-list { display: flex; flex-direction: column; gap: 10px; width: min(360px, 86vw); margin-top: 26px; }
-.menu-list .btn { text-align: left; }
+.menu-list .btn { text-align: left; background-color: rgba(6, 9, 24, 0.62); }
 .corner {
   position: absolute;
   display: flex;
@@ -481,6 +481,10 @@ input[type='range'] { flex: 1.4; min-width: 140px; accent-color: var(--neon); he
 
 .fatal { max-width: 560px; padding: 28px; text-align: left; }
 .fatal p { color: var(--dim); font-size: 17px; line-height: 1.5; }
+
+@media (orientation: portrait) {
+  .hud.touch-on .speedo { bottom: calc(max(24px, env(safe-area-inset-bottom)) + 150px); }
+}
 
 @media (max-width: 600px) {
   .hud .tc { top: max(46px, calc(env(safe-area-inset-top) + 34px)); }

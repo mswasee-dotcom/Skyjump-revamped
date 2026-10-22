@@ -253,9 +253,9 @@ export class Session {
   private physicsStep(input: DriveInput): void {
     const s = this.state;
     if (this.phase === 'finished') {
-      // Cruise through the finish gate on autopilot.
+      // Glide through the finish gate and brake to a stop on the finish platform.
       s.d += s.speed * PHYSICS_DT;
-      s.speed = Math.max(10, s.speed - 6 * PHYSICS_DT);
+      s.speed = Math.max(0, s.speed - 16 * PHYSICS_DT);
       s.vx *= 0.95;
       s.x += s.vx * PHYSICS_DT;
       this.time += PHYSICS_DT;

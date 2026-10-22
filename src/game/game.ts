@@ -394,7 +394,7 @@ export class Game {
         this.startLevel(id);
       },
       /** Step the simulation synchronously (no rendering) — lets slow software-GL test browsers cover real time. */
-      advance: (seconds: number, steer = 0, throttle = 0, jumpEvery = 0) => {
+      advance: (seconds: number, steer?: number, throttle?: number, jumpEvery = 0) => {
         let t = 0;
         let nextJump = jumpEvery;
         while (t < seconds && this.session && (this.mode === 'playing' || this.mode === 'results' || this.mode === 'gameover')) {
@@ -402,7 +402,8 @@ export class Game {
             this.session.queueJump();
             nextJump += jumpEvery;
           }
-          this.session.frame(1 / 60, { steer, throttle, jumpPressed: false });
+          const live = this.input.drive();
+          this.session.frame(1 / 60, steer === undefined ? live : { steer, throttle: throttle ?? 0, jumpPressed: false });
           t += 1 / 60;
         }
         if (this.session) this.ui.updateHud(this.session.hud(), this.fps);

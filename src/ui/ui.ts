@@ -497,7 +497,7 @@ export class UI {
   showHud(touch: boolean, showFps: boolean): void {
     this.clearScreens();
     this.lastHud = '';
-    this.hudLayer.innerHTML = `<div class="hud">
+    this.hudLayer.innerHTML = `<div class="hud${touch ? ' touch-on' : ''}">
       <div class="tl"><div class="level-title" data-h="title"></div><div class="lives" data-h="lives"></div></div>
       <div class="tc"><div class="label" data-h="timeLabel">TIME</div><div class="time" data-h="time">00:00.00</div></div>
       <div class="tr"><div class="label">SCORE</div><div class="score" data-h="score">0</div><div class="orbs" data-h="orbs"></div></div>
@@ -538,7 +538,11 @@ export class UI {
     this.screen.querySelectorAll<HTMLElement>('[data-touch]').forEach((el) => {
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        el.setPointerCapture(e.pointerId);
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          /* synthetic or already-released pointer */
+        }
         pointers.set(e.pointerId, el);
         this.act.unlockAudio();
         set(el, true);
