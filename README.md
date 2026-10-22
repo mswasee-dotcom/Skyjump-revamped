@@ -21,6 +21,20 @@ npm run build:single # one self-contained HTML file in dist-single/ (easy to sha
 
 Requires Node 18+ and a browser with WebGL (any current Chrome, Edge, Firefox or Safari, desktop or mobile).
 
+## Publishing
+
+The game is a static site (everything is in `dist/` after `npm run build`), so any static host works.
+
+**Cloudflare Workers (free; keeps the repo private):**
+
+```bash
+npm run deploy      # builds, then deploys dist/ with wrangler (opens a browser login the first time)
+```
+
+The game appears at `https://neon-roadrunner.<your-subdomain>.workers.dev`. For automatic deploys on every push, connect the repo in the Cloudflare dashboard (Workers & Pages → Create → Import a repository) with build command `npm run build` and deploy command `npx wrangler deploy`.
+
+**GitHub Pages:** `.github/workflows/pages.yml` deploys on push to `main` once Pages is set to "GitHub Actions" (free plan needs a public repo).
+
 ## How to play
 
 Your ship flies forward on its own. Steer, accelerate or brake, and jump to reach the finish gate. Falling off the road or hitting a wall costs a life; you respawn at the last checkpoint.

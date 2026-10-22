@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "build:single": "tsc --noEmit && vite build --mode single",
     "preview": "vite preview",
+    "deploy": "npm run build && npx wrangler@4 deploy",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
