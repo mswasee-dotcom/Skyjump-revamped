@@ -264,7 +264,7 @@ export class Track {
 export function orbHeight(track: Track, row: number, lane: number): number {
   const c = track.cell(row, lane);
   const base = track.rowY(row);
-  if (c.type === TileType.Empty) return base + 1.7;
+  if (c.type === TileType.Empty) return base + 1.3;
   if (c.block === BlockKind.Low) return base + LOW_BLOCK_HEIGHT + 0.7;
   return base + 0.7 + Math.max(0, c.rise) * 0.5;
 }

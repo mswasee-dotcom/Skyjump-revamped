@@ -1,6 +1,6 @@
 # NEON ROADRUNNER
 
-A modern 3D arcade racer inspired by the 1993 classic **SkyRoads**. Fly a small ship along a narrow neon road suspended over the void: steer, manage your speed, jump the gaps, read the tiles, and reach the finish gate without falling into space.
+A 3D arcade racer inspired by the 1993 classic **SkyRoads**, with a clean retro-arcade look: solid-colour bevelled blocks, bold tile symbols, banded planets and a pixel-font interface. Fly a small ship along a narrow neon road suspended over the void: steer, manage your speed, jump the gaps, read the tiles, and reach the finish gate without falling into space.
 
 Built with TypeScript, Three.js and Vite. Runs entirely in the browser — no backend, no accounts, no network calls. All visuals and audio are generated procedurally at runtime, so the game ships with no image or sound assets, and none of SkyRoads' original assets, music or levels are used.
 
@@ -98,6 +98,7 @@ scripts/         browser smoke tests (Playwright) and level-design probes
 - **Track rendering is chunked and instanced**: only the 24-row chunks near the camera exist, each drawing all tiles of a type in one call. Memory and draw calls stay flat however long a run gets (which is what makes endless mode possible). Chunks are disposed as they fall behind.
 - **One pooled particle system** handles every effect (exhaust trails, sparks, explosions, landing dust, orbs, crumbling tiles) with a fixed capacity and no per-frame allocation.
 - **Save data is versioned and sanitised field by field**, so a corrupted or outdated save never wipes progress; corrupted data is backed up to a `.corrupt` key.
+- **Two looks** (Settings → Graphics → Look): *Arcade* (default; flat-shaded solid tiles, no bloom) and *Neon* (glowing synthwave grid with bloom).
 - **Quality levels**: High (bloom, up to 2× pixel ratio), Medium (half-resolution bloom), Low (no post-processing, 1× pixel ratio) for older laptops and phones.
 
 ## Testing
@@ -147,4 +148,4 @@ Then run `npm run test:levels` to prove it's still completable.
 
 ## Credits
 
-Original game design, code, geometry, textures, music and sound. Inspired by *SkyRoads* (Bluemoon Interactive, 1993). Fonts: Orbitron and Rajdhani (SIL Open Font License), bundled via Fontsource.
+Original game design, code, geometry, textures, music and sound. Inspired by *SkyRoads* (Bluemoon Interactive, 1993). Fonts: Press Start 2P, Orbitron and Rajdhani (SIL Open Font License), bundled via Fontsource.

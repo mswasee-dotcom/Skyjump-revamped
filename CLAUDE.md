@@ -17,13 +17,16 @@ A SkyRoads-inspired 3D browser racer. TypeScript + Three.js + Vite, no backend. 
 ## Architectural invariants
 1. **`src/core` and `src/levels` must never import Three.js or touch the DOM.** They run in Node for tests and the autopilot.
 2. **Physics is fixed-step (`PHYSICS_DT`, 120 Hz) and deterministic.** Never step physics with a variable dt. All gameplay numbers live in `src/core/constants.ts` and `src/core/vehicles.ts`.
-3. **Every campaign layout must be completable** by the autopilot with each ship within the sector's lives (`tests/campaign.slow.ts`). Gaps must stay within a cruise-speed jump (≈5.5 rows normal, ≈7.7 rows launch pad); `tests/levels.test.ts` enforces ≤7.
+3. **Every campaign layout must be completable** by the autopilot with each ship within the sector's lives (`tests/campaign.slow.ts`). Gaps must stay within a cruise-speed jump (≈4.5 rows normal, ≈6.9 rows launch pad; jumps were deliberately tightened for challenge); `tests/levels.test.ts` enforces ≤7.
 4. **All three ships share cruise speed (16) and near-identical jump arcs** so that level fairness doesn't depend on ship choice. Ships differ in top speed, steering and grip.
 5. **Endless patterns must be fair by construction**: start and end on plain tiles inside the corridor, keep ≥2 adjacent safe lanes beside walls/plasma. `tests/levels.test.ts` checks 60 seeds × 1500 rows structurally.
 6. **Save data goes through `sanitize()`**. Add new fields with defaults there; bump `SAVE_VERSION` and extend `migrate()` for layout changes. Never let a bad field wipe progress.
 7. **No external network calls, no assets with licensing questions.** Textures are canvas-drawn, audio is synthesized, fonts are bundled.
 8. **Every UI control must do something.** No dead buttons.
 9. Respawns call `track.resetState(checkpoint)` without restoring orbs (no farming); a full restart creates a new Session.
+
+## Visual style
+Default look is `arcade` (src/render/style.ts): Lambert flat-shaded tiles with textures from `retroTextures.ts`, no bloom, pixel font UI (`html.pixel-ui`). `neon` is the alternative. Keep standard-tile tints away from special-tile colours (tested).
 
 ## Where things are
 - Game flow / state machine: `src/game/game.ts`; one race: `src/game/session.ts`

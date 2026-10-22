@@ -10,6 +10,11 @@ import {
   WALL_HEIGHT,
 } from '../core/constants';
 import { canvasTexture, drawSide, drawTile } from './textures';
+import { style } from './style';
+import { cleanTexture, drawRetroSide, drawRetroTile, retroBase } from './retroTextures';
+import { retroMat } from './retroMaterials';
+
+type Glowing = THREE.MeshStandardMaterial | THREE.MeshLambertMaterial;
 
 const CHUNK_ROWS = 24;
 const VIEW_BEHIND = 2; // chunks
@@ -38,8 +43,8 @@ class TileMaterials {
   private cache = new Map<string, THREE.Material[]>();
   private textures: THREE.Texture[] = [];
   private mats: THREE.Material[] = [];
-  hazardMats: THREE.MeshStandardMaterial[] = [];
-  boostMats: THREE.MeshStandardMaterial[] = [];
+  hazardMats: Glowing[] = [];
+  boostMats: Glowing[] = [];
 
   constructor(private neon: string) {}
 
@@ -47,6 +52,23 @@ class TileMaterials {
     const key = `${type}:${kind}`;
     let m = this.cache.get(key);
     if (m) return m;
+    const st = style();
+    if (st.flat) {
+      const base = retroBase(parseInt(this.neon.slice(1), 16));
+      const topTex = cleanTexture(drawRetroTile(type, base));
+      const sideTex = cleanTexture(drawRetroSide(base, kind === 'wall'), true);
+      this.textures.push(topTex, sideTex);
+      const glow = type === TileType.Hazard || type === TileType.Boost;
+      const top = retroMat({ map: topTex, emissiveMap: glow ? topTex : null, emissive: glow ? 0xffffff : 0x000000, emissiveIntensity: 0 });
+      const side = retroMat({ map: sideTex });
+      const bottom = retroMat({ color: 0x0a0a12 });
+      if (type === TileType.Hazard) this.hazardMats.push(top);
+      if (type === TileType.Boost) this.boostMats.push(top);
+      m = [side, side, top, bottom, side, side];
+      this.mats.push(top, side, bottom);
+      this.cache.set(key, m);
+      return m;
+    }
     const topCanvas = drawTile(type);
     // Re-tint the standard tile to this sector's neon colour.
     if (type === TileType.Standard || type === TileType.Checkpoint) this.retint(topCanvas, TILE_INFO[TileType.Standard].color);
@@ -106,15 +128,16 @@ export class TrackView {
   private chunks = new Map<number, Chunk>();
   private mats: TileMaterials;
   private box = new THREE.BoxGeometry(1, 1, 1);
-  private orbGeo = new THREE.IcosahedronGeometry(0.26, 1);
-  private orbMat = new THREE.MeshStandardMaterial({ color: 0xbffcff, emissive: 0x6ff6ff, emissiveIntensity: 2.2, roughness: 0.2 });
-  private pylonMat: THREE.MeshStandardMaterial;
+  private orbGeo: THREE.BufferGeometry = new THREE.IcosahedronGeometry(0.26, 1);
+  private orbMat: THREE.Material;
+  private pylonMat: THREE.Material;
   /** Warning strip drawn on the front lip of any tile that ends at a gap or a drop. */
   private ledgeMat = new THREE.MeshBasicMaterial({ color: 0xffc23d, toneMapped: false });
-  private gateMat: THREE.MeshStandardMaterial;
-  private finishMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.6 });
+  private gateMat: THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
+  private finishMat: THREE.Material;
+  private retro = style().flat;
   private obstacleMeshes: THREE.Mesh[] = [];
-  private obstacleMat: THREE.MeshStandardMaterial;
+  private obstacleMat: THREE.Material;
   private tmp = new THREE.Matrix4();
   private tmpQ = new THREE.Quaternion();
   private tmpV = new THREE.Vector3();
@@ -127,17 +150,31 @@ export class TrackView {
   constructor(private track: Track, neon: number) {
     const neonHex = `#${new THREE.Color(neon).getHexString()}`;
     this.mats = new TileMaterials(neonHex);
-    this.pylonMat = new THREE.MeshStandardMaterial({ color: 0x0a0e1c, emissive: neon, emissiveIntensity: 0.08, roughness: 0.8, metalness: 0.6 });
-    this.gateMat = new THREE.MeshStandardMaterial({ color: neon, emissive: neon, emissiveIntensity: 1.8 });
-    const obsTex = canvasTexture(drawSide('#ff2d6f', true));
-    this.obstacleMat = new THREE.MeshStandardMaterial({
-      map: obsTex,
-      emissiveMap: obsTex,
-      emissive: 0xffffff,
-      emissiveIntensity: 1.1,
-      roughness: 0.4,
-      metalness: 0.6,
-    });
+    if (this.retro) {
+      const base = retroBase(neon);
+      this.orbGeo.dispose();
+      this.orbGeo = new THREE.OctahedronGeometry(0.28, 0);
+      this.orbMat = new THREE.MeshBasicMaterial({ color: 0xffe14a });
+      this.pylonMat = retroMat({ color: new THREE.Color(base[0] / 400, base[1] / 400, base[2] / 400) });
+      this.gateMat = new THREE.MeshBasicMaterial({ color: 0xe8e8e8 });
+      this.finishMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const obsTex = cleanTexture(drawRetroSide([150, 30, 40], true), true);
+      this.obstacleMat = retroMat({ map: obsTex });
+    } else {
+      this.orbMat = new THREE.MeshStandardMaterial({ color: 0xbffcff, emissive: 0x6ff6ff, emissiveIntensity: 2.2, roughness: 0.2 });
+      this.pylonMat = new THREE.MeshStandardMaterial({ color: 0x0a0e1c, emissive: neon, emissiveIntensity: 0.08, roughness: 0.8, metalness: 0.6 });
+      this.gateMat = new THREE.MeshStandardMaterial({ color: neon, emissive: neon, emissiveIntensity: 1.8 });
+      this.finishMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.6 });
+      const obsTex = canvasTexture(drawSide('#ff2d6f', true));
+      this.obstacleMat = new THREE.MeshStandardMaterial({
+        map: obsTex,
+        emissiveMap: obsTex,
+        emissive: 0xffffff,
+        emissiveIntensity: 1.1,
+        roughness: 0.4,
+        metalness: 0.6,
+      });
+    }
     for (const o of track.obstacles) {
       const m = new THREE.Mesh(this.box, this.obstacleMat);
       m.scale.set(o.width * LANE_WIDTH - 0.1, o.height, o.rows * ROW_LENGTH - 0.1);
@@ -176,9 +213,16 @@ export class TrackView {
 
     // Pulsing materials
     const pulse = 0.5 + 0.5 * Math.sin(time * 6);
-    for (const m of this.mats.hazardMats) m.emissiveIntensity = 0.9 + pulse * 0.9;
-    for (const m of this.mats.boostMats) m.emissiveIntensity = 1.2 + (0.5 + 0.5 * Math.sin(time * 14)) * 0.8;
-    this.gateMat.emissiveIntensity = 1.4 + pulse * 0.6;
+    if (this.retro) {
+      // Retro blink: hard on/off steps instead of smooth glow.
+      const step = Math.sin(time * 8) > 0 ? 0.35 : 0;
+      for (const m of this.mats.hazardMats) m.emissiveIntensity = step;
+      for (const m of this.mats.boostMats) m.emissiveIntensity = Math.sin(time * 12) > 0 ? 0.4 : 0;
+    } else {
+      for (const m of this.mats.hazardMats) m.emissiveIntensity = 0.9 + pulse * 0.9;
+      for (const m of this.mats.boostMats) m.emissiveIntensity = 1.2 + (0.5 + 0.5 * Math.sin(time * 14)) * 0.8;
+      (this.gateMat as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 + pulse * 0.6;
+    }
 
     // Orbs bob and spin
     for (const ch of this.chunks.values()) {
@@ -413,7 +457,7 @@ export class TrackView {
     const ctx = c.getContext('2d')!;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, 512, 64);
-    ctx.font = '700 44px Orbitron, sans-serif';
+    ctx.font = this.retro ? '28px "Press Start 2P", monospace' : '700 44px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
@@ -443,7 +487,7 @@ export class TrackView {
     this.ledgeMat.dispose();
     this.gateMat.dispose();
     this.finishMat.dispose();
-    this.obstacleMat.map?.dispose();
+    (this.obstacleMat as THREE.MeshLambertMaterial).map?.dispose();
     this.obstacleMat.dispose();
     this.bannerTex?.dispose();
     this.track.onFragileChange = null;

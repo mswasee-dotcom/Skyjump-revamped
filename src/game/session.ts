@@ -14,6 +14,7 @@ import { TrackView } from '../render/trackView';
 import { Environment } from '../render/environment';
 import { buildShip, ShipModel } from '../render/ships';
 import { Particles } from '../render/particles';
+import { style } from '../render/style';
 import { CameraRig } from '../render/cameraRig';
 import type { Renderer } from '../render/renderer';
 import type { AudioEngine } from '../audio/audio';
@@ -144,7 +145,7 @@ export class Session {
     scene.add(this.view.group);
     this.ship = buildShip(cfg.vehicle, cfg.custom);
     scene.add(this.ship.group);
-    this.particles = new Particles(cfg.quality === 'low' ? 1500 : 3500);
+    this.particles = new Particles(cfg.quality === 'low' ? 1500 : 3500, style().flat);
     scene.add(this.particles.points);
     this.particles.setViewportHeight(renderer.renderer.domElement.height);
     renderer.onResize = (_w, h) => this.particles.setViewportHeight(h);

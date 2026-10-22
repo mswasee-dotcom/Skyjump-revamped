@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { VehicleId } from '../core/vehicles';
 import type { Customization } from '../core/save';
 import { radialTexture } from './textures';
+import { style } from './style';
+import { retroMat } from './retroMaterials';
 
 /** Ships are modelled facing -Z with the hull bottom at y = 0 (the physics contact point). */
 export interface ShipModel {
@@ -49,10 +51,15 @@ export function buildShip(id: VehicleId, custom: Customization): ShipModel {
   const geos: THREE.BufferGeometry[] = [];
   const mats: THREE.Material[] = [];
 
-  const hull = new THREE.MeshStandardMaterial({ color: custom.body, metalness: 0.65, roughness: 0.32 });
-  const trim = new THREE.MeshStandardMaterial({ color: 0x10131f, metalness: 0.7, roughness: 0.45 });
-  const accent = new THREE.MeshStandardMaterial({ color: custom.accent, emissive: custom.accent, emissiveIntensity: 1.6, roughness: 0.4 });
-  const glass = new THREE.MeshStandardMaterial({ color: 0x0b1020, emissive: custom.accent, emissiveIntensity: 0.25, metalness: 0.9, roughness: 0.08 });
+  const retro = style().flat;
+  const hull: THREE.MeshStandardMaterial | THREE.MeshLambertMaterial = retro ? retroMat({ color: custom.body }) : new THREE.MeshStandardMaterial({ color: custom.body, metalness: 0.65, roughness: 0.32 });
+  const trim = retro ? retroMat({ color: 0x2a2f44 }) : new THREE.MeshStandardMaterial({ color: 0x10131f, metalness: 0.7, roughness: 0.45 });
+  const accent: THREE.MeshStandardMaterial | THREE.MeshLambertMaterial = retro
+    ? retroMat({ color: custom.accent, emissive: custom.accent, emissiveIntensity: 0.6 })
+    : new THREE.MeshStandardMaterial({ color: custom.accent, emissive: custom.accent, emissiveIntensity: 1.6, roughness: 0.4 });
+  const glass: THREE.MeshStandardMaterial | THREE.MeshLambertMaterial = retro
+    ? retroMat({ color: 0x1a2a50, emissive: custom.accent, emissiveIntensity: 0.15 })
+    : new THREE.MeshStandardMaterial({ color: 0x0b1020, emissive: custom.accent, emissiveIntensity: 0.25, metalness: 0.9, roughness: 0.08 });
   const nozzleMat = new THREE.MeshBasicMaterial({ color: custom.trail, toneMapped: false });
   mats.push(hull, trim, accent, glass, nozzleMat);
 
@@ -117,7 +124,9 @@ export function buildShip(id: VehicleId, custom: Customization): ShipModel {
   const flareMats: THREE.SpriteMaterial[] = [];
   const flares: THREE.Sprite[] = [];
   for (const n of nozzles) {
-    const m = new THREE.SpriteMaterial({ map: glow(), color: custom.trail, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+    const m = retro
+      ? new THREE.SpriteMaterial({ map: glow(), color: custom.trail, transparent: true, depthWrite: false, toneMapped: false })
+      : new THREE.SpriteMaterial({ map: glow(), color: custom.trail, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
     const s = new THREE.Sprite(m);
     s.position.copy(n);
     body.add(s);
@@ -129,7 +138,7 @@ export function buildShip(id: VehicleId, custom: Customization): ShipModel {
   const under = new THREE.Mesh(underGeo, underMat);
   under.rotation.x = -Math.PI / 2;
   under.position.y = 0.02;
-  body.add(under);
+  if (!retro) body.add(under);
   geos.push(underGeo);
   mats.push(underMat, ...flareMats);
 
@@ -148,7 +157,7 @@ export function buildShip(id: VehicleId, custom: Customization): ShipModel {
     },
     setThrust(t: number, boost: boolean, time: number) {
       const flick = 0.85 + Math.sin(time * 60) * 0.08 + Math.sin(time * 37) * 0.07;
-      const size = (0.22 + t * 0.32 + (boost ? 0.45 : 0)) * flick;
+      const size = retro ? (0.16 + t * 0.12 + (boost ? 0.2 : 0)) * flick : (0.22 + t * 0.32 + (boost ? 0.45 : 0)) * flick;
       for (const f of flares) f.scale.set(size, size, 1);
       underMat.opacity = 0.2 + t * 0.15;
     },

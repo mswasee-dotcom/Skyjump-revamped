@@ -4,6 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import type { Quality } from '../core/save';
+import { style } from './style';
 
 export function webglAvailable(): boolean {
   try {
@@ -47,7 +48,7 @@ export class Renderer {
     this.composer?.dispose();
     this.composer = null;
     this.bloom = null;
-    if (q !== 'low') {
+    if (q !== 'low' && style().bloom) {
       const size = this.renderer.getSize(new THREE.Vector2());
       this.composer = new EffectComposer(this.renderer);
       this.composer.addPass(new RenderPass(this.scene, this.camera));

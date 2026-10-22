@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { Theme } from '../levels/themes';
 import { planetTexture, radialTexture, ringTexture } from './textures';
+import { style } from './style';
+import { retroPlanet } from './retroTextures';
+import { retroMat } from './retroMaterials';
 
 /**
  * Deep-space backdrop: gradient sky dome, star field, nebula glows, planets with rings, and a
@@ -21,6 +24,8 @@ export class Environment {
 
   constructor(theme: Theme, quality: 'low' | 'medium' | 'high') {
     this.group.add(this.backdrop);
+    const st = style();
+    const retro = st.flat;
 
     // Sky dome
     const skyGeo = new THREE.SphereGeometry(1500, 32, 16);
@@ -30,18 +35,36 @@ export class Environment {
       fog: false,
       uniforms: {
         top: { value: new THREE.Color(theme.skyTop) },
-        horizon: { value: new THREE.Color(theme.sky) },
+        horizon: { value: retro ? new THREE.Color(theme.skyTop).lerp(new THREE.Color(theme.sky), 0.55) : new THREE.Color(theme.sky) },
         glow: { value: new THREE.Color(theme.nebula) },
+        levels: { value: 0 },
+        dither: { value: 0 },
+        glowAmt: { value: retro ? 0.22 : 0.35 },
       },
       vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-      fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 glow; varying vec3 vDir;
+      fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 glow; uniform float levels; uniform float dither; uniform float glowAmt; varying vec3 vDir;
+        float bayer(vec2 p){
+          vec2 q = mod(floor(p), 4.0);
+          float i = q.x + q.y * 4.0;
+          // 4x4 ordered dither matrix
+          float m[16];
+          m[0]=0.0; m[1]=8.0; m[2]=2.0; m[3]=10.0; m[4]=12.0; m[5]=4.0; m[6]=14.0; m[7]=6.0;
+          m[8]=3.0; m[9]=11.0; m[10]=1.0; m[11]=9.0; m[12]=15.0; m[13]=7.0; m[14]=13.0; m[15]=5.0;
+          float v = 0.0;
+          for (int k = 0; k < 16; k++) { if (float(k) == i) v = m[k]; }
+          return v / 16.0 - 0.5;
+        }
         void main(){
           float h = clamp(vDir.y * 1.4 + 0.15, 0.0, 1.0);
           vec3 c = mix(horizon, top, pow(h, 0.7));
           float band = exp(-pow((vDir.y + 0.05) * 6.0, 2.0));
-          c += glow * band * 0.35;
+          c += glow * band * glowAmt;
           float below = clamp(-vDir.y * 2.0, 0.0, 1.0);
           c = mix(c, top * 0.6, below);
+          if (levels > 0.0) {
+            c += bayer(gl_FragCoord.xy) * dither / levels;
+            c = floor(c * levels + 0.5) / levels;
+          }
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -68,7 +91,9 @@ export class Environment {
     starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
     starGeo.setAttribute('color', new THREE.BufferAttribute(sc, 3));
     const starTex = radialTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)', 32);
-    const starMat = new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, map: starTex, transparent: true, depthWrite: false, fog: false });
+    const starMat = retro
+      ? new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, depthWrite: false, fog: false })
+      : new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, map: starTex, transparent: true, depthWrite: false, fog: false });
     const stars = new THREE.Points(starGeo, starMat);
     this.backdrop.add(stars);
     this.disposables.push(starGeo, starMat, starTex);
@@ -83,7 +108,7 @@ export class Environment {
       [100, 300, -1100, 700],
       [-300, -200, -800, 600],
     ];
-    for (const [x, y, z, s] of placements) {
+    for (const [x, y, z, s] of st.nebula ? placements : []) {
       const mat = new THREE.SpriteMaterial({ map: nebTex, color: nebColor, transparent: true, opacity: 0.35, depthWrite: false, fog: false, blending: THREE.AdditiveBlending });
       const spr = new THREE.Sprite(mat);
       spr.position.set(x, y, z);
@@ -94,9 +119,11 @@ export class Environment {
 
     // Planets
     theme.planets.forEach((p, i) => {
-      const tex = planetTexture(p.a, p.b, 7 + i * 13);
+      const tex = retro ? retroPlanet(p.a, p.b, 7 + i * 13) : planetTexture(p.a, p.b, 7 + i * 13);
       const geo = new THREE.SphereGeometry(p.r, 48, 24);
-      const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, emissive: new THREE.Color(p.b), emissiveIntensity: 0.25, fog: false });
+      const mat = retro
+        ? retroMat({ map: tex, emissive: new THREE.Color(p.b), emissiveIntensity: 0.35, fog: false, flatShading: false })
+        : new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, emissive: new THREE.Color(p.b), emissiveIntensity: 0.25, fog: false });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(...p.pos);
       mesh.rotation.z = 0.35 * (i % 2 ? -1 : 1);
@@ -108,7 +135,7 @@ export class Environment {
       const halo = new THREE.Sprite(haloMat);
       halo.position.copy(mesh.position);
       halo.scale.setScalar(p.r * 2.9);
-      this.backdrop.add(halo);
+      if (!retro) this.backdrop.add(halo);
       this.disposables.push(haloMat);
       if (p.ring) {
         const rt = ringTexture(p.a);
@@ -148,7 +175,9 @@ export class Environment {
     const dg = new THREE.BufferGeometry();
     dg.setAttribute('position', new THREE.BufferAttribute(this.dustPositions, 3));
     const dustTex = radialTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)', 32);
-    const dm = new THREE.PointsMaterial({ size: 0.18, color: new THREE.Color(theme.neon).lerp(new THREE.Color(0xffffff), 0.5), map: dustTex, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending });
+    const dm = retro
+      ? new THREE.PointsMaterial({ size: 2, sizeAttenuation: false, color: 0x9aa4c0, depthWrite: false })
+      : new THREE.PointsMaterial({ size: 0.18, color: new THREE.Color(theme.neon).lerp(new THREE.Color(0xffffff), 0.5), map: dustTex, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending });
     this.dust = new THREE.Points(dg, dm);
     this.dust.frustumCulled = false;
     this.group.add(this.dust);

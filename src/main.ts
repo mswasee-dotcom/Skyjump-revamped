@@ -3,6 +3,7 @@ import '@fontsource/orbitron/latin-700.css';
 import '@fontsource/orbitron/latin-900.css';
 import '@fontsource/rajdhani/latin-500.css';
 import '@fontsource/rajdhani/latin-600.css';
+import '@fontsource/press-start-2p/latin-400.css';
 import './ui/styles.css';
 import { webglAvailable } from './render/renderer';
 import { Game } from './game/game';

@@ -10,6 +10,7 @@ import { Customization, KV, SaveData, Settings, defaultSave, loadSave, writeSave
 import { applyUnlocks, isEndlessUnlocked, isLevelUnlocked, nextLevel, recordAttempt, recordCompletion } from '../core/progress';
 import type { VehicleId } from '../core/vehicles';
 import { DEFAULT_TUNING } from '../core/physics';
+import { setStyle, style, styleId } from '../render/style';
 
 type Mode = 'title' | 'menu' | 'playing' | 'paused' | 'results' | 'gameover';
 
@@ -48,6 +49,7 @@ export class Game {
   constructor(host: HTMLElement, uiRoot: HTMLElement) {
     const loaded = loadSave(this.store);
     this.save = loaded.data;
+    this.applyLook();
     this.renderer = new Renderer(host, this.save.settings.quality);
     this.appliedQuality = this.save.settings.quality;
     this.input = new Input(this.save.settings.keys);
@@ -312,6 +314,11 @@ export class Game {
     this.audio.setVolumes(s.musicVolume, s.sfxVolume, s.muted);
   }
 
+  private applyLook(): void {
+    setStyle(this.save.settings.look);
+    document.documentElement.classList.toggle('pixel-ui', style().pixelFont);
+  }
+
   private persist(): void {
     writeSave(this.store, this.save);
   }
@@ -349,6 +356,18 @@ export class Game {
         this.save.settings = s;
         this.applyAudioSettings();
         this.input.setKeys(s.keys);
+        if (s.look !== styleId()) {
+          this.applyLook();
+          this.renderer.applyQuality(s.quality);
+          if (this.showcase) {
+            const v = this.save.garage.selected;
+            const mode = this.showcase.mode;
+            this.showcase.dispose();
+            this.showcase = new Showcase(this.renderer, v, this.save.garage.custom[v], CAMPAIGN[nextLevel(this.save) - 1].theme, s.quality);
+            this.showcase.mode = mode;
+          }
+          if (this.session) this.ui.toast('NEW LOOK APPLIES FROM THE NEXT RACE', 'info');
+        }
         if (s.quality !== this.appliedQuality) {
           this.appliedQuality = s.quality;
           this.renderer.applyQuality(s.quality);

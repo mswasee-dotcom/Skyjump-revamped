@@ -7,6 +7,8 @@ import { MEDAL_NAMES, formatTime } from '../core/scoring';
 import { LEGEND_TILES, TILE_INFO } from '../core/tiles';
 import type { HudState, RunResult } from '../game/session';
 import { drawTile } from '../render/textures';
+import { STYLES, STYLE_ORDER, style, styleId } from '../render/style';
+import { drawRetroTile, retroBase } from '../render/retroTextures';
 
 export interface UiActions {
   start(): void;
@@ -382,10 +384,11 @@ export class UI {
             ${slider('cameraStiffness', 'Camera responsiveness', 0.5, 1.5, 0.05, mult)}
             ${toggle('reducedShake', 'Reduced screen shake')}
             <h3>GRAPHICS</h3>
+            <div class="row"><label>Look</label><div class="seg">${STYLE_ORDER.map((o) => `<button class="${s.look === o ? 'active' : ''}" data-act="seg" data-key="look" data-v="${o}" title="${STYLES[o].blurb}">${STYLES[o].label.toUpperCase()}</button>`).join('')}</div></div>
             ${seg('quality', 'Quality', ['low', 'medium', 'high'])}
             ${toggle('showFps', 'Show FPS')}
             <div class="row"><label>Fullscreen</label><button class="btn small" data-act="full">Toggle</button></div>
-            <p class="note">Low disables bloom and renders at native resolution — use it on older laptops and phones.</p>
+            <p class="note">Look changes the whole art style; gameplay is identical. Quality sets resolution and glow for the Neon look — use Low on older laptops and phones.</p>
           </div>
           <div class="panel">
             <h3>CONTROLS</h3>
@@ -458,10 +461,12 @@ export class UI {
 
   // ------------------------------------------------------------------ how to play
   private tileImg(t: number): string {
-    let url = this.legendCache.get(t);
+    const st = style();
+    const key = t * 10 + STYLE_ORDER.indexOf(styleId());
+    let url = this.legendCache.get(key);
     if (!url) {
-      url = drawTile(t).toDataURL();
-      this.legendCache.set(t, url);
+      url = st.flat ? drawRetroTile(t, retroBase(0x2de2ff)).toDataURL() : drawTile(t).toDataURL();
+      this.legendCache.set(key, url);
     }
     return url;
   }

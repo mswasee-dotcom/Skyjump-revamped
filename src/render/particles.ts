@@ -50,7 +50,7 @@ export class Particles {
   private c1 = new THREE.Color();
   private c2 = new THREE.Color();
 
-  constructor(capacity: number) {
+  constructor(capacity: number, square = false) {
     this.cap = capacity;
     this.pos = new Float32Array(capacity * 3);
     this.col = new Float32Array(capacity * 3);
@@ -72,7 +72,7 @@ export class Particles {
     this.mat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: square ? THREE.NormalBlending : THREE.AdditiveBlending,
       uniforms: { scale: { value: 600 } },
       vertexShader: `
         attribute float size; attribute float alpha; attribute vec3 color;
@@ -80,18 +80,22 @@ export class Particles {
         void main(){
           vAlpha = alpha; vColor = color;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * scale / max(0.1, -mv.z);
+          gl_PointSize = ${square ? 'max(1.5, size * scale / max(0.1, -mv.z) * 0.6)' : 'size * scale / max(0.1, -mv.z)'};
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `
         varying float vAlpha; varying vec3 vColor;
         void main(){
+          ${square ? `
+          vec2 p = gl_PointCoord - 0.5;
+          if (length(p) > 0.5 || vAlpha < 0.05) discard;
+          gl_FragColor = vec4(vColor, min(1.0, vAlpha * 1.4));` : `
           vec2 p = gl_PointCoord - 0.5;
           float d = length(p) * 2.0;
           float a = smoothstep(1.0, 0.0, d);
           a *= a;
           if (vAlpha * a < 0.003) discard;
-          gl_FragColor = vec4(vColor * (1.0 + (1.0 - d) * 0.8), vAlpha * a);
+          gl_FragColor = vec4(vColor * (1.0 + (1.0 - d) * 0.8), vAlpha * a);`}
         }`,
     });
     this.points = new THREE.Points(this.geo, this.mat);

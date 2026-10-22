@@ -25,6 +25,8 @@ export const DEFAULT_KEYS: Record<Action, string[]> = {
 
 export type Quality = 'low' | 'medium' | 'high';
 export type TrailEffect = 'plasma' | 'ion' | 'spark' | 'prism' | 'nova';
+export type LookSetting = 'arcade' | 'neon';
+const LOOKS: LookSetting[] = ['arcade', 'neon'];
 
 export interface Settings {
   musicVolume: number;
@@ -35,6 +37,8 @@ export interface Settings {
   cameraStiffness: number;
   reducedShake: boolean;
   quality: Quality;
+  /** Visual style preset (see render/style.ts). */
+  look: LookSetting;
   showFps: boolean;
   touchControls: 'auto' | 'on' | 'off';
   keys: Record<Action, string[]>;
@@ -99,6 +103,7 @@ export function defaultSettings(): Settings {
     cameraStiffness: 1,
     reducedShake: false,
     quality: 'high',
+    look: 'arcade',
     showFps: false,
     touchControls: 'auto',
     keys: structuredClone(DEFAULT_KEYS),
@@ -183,6 +188,7 @@ export function sanitize(raw: unknown): SaveData {
     cameraStiffness: num(s.cameraStiffness, ds.cameraStiffness, 0.5, 1.5),
     reducedShake: bool(s.reducedShake, ds.reducedShake),
     quality: (['low', 'medium', 'high'] as Quality[]).includes(s.quality as Quality) ? (s.quality as Quality) : ds.quality,
+    look: LOOKS.includes(s.look as LookSetting) ? (s.look as LookSetting) : ds.look,
     showFps: bool(s.showFps, ds.showFps),
     touchControls: (['auto', 'on', 'off'] as const).includes(s.touchControls as 'auto') ? (s.touchControls as Settings['touchControls']) : 'auto',
     keys: structuredClone(DEFAULT_KEYS),

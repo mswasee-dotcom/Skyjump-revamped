@@ -5,9 +5,9 @@ import type { LevelDef } from './types';
  * Width 7 rows are 7 characters between the pipes, width 9 rows are 9; shorter rows are centred.
  *
  * Reference numbers at cruise speed (16 u/s), one row = 2 units:
- *   normal jump  ≈ 5.5 rows of air, apex ≈ 1.9 units
- *   launch pad   ≈ 7.7 rows of air, apex ≈ 3.7 units
- *   after a drag plate (8 u/s) a jump only covers ≈ 2.7 rows
+ *   normal jump  ≈ 4.5 rows of air, apex ≈ 1.45 units
+ *   launch pad   ≈ 6.9 rows of air, apex ≈ 3.3 units
+ *   after a drag plate (8 u/s) a jump only covers ≈ 2.3 rows
  *
  * Every layout is driven end-to-end by the physics autopilot in tests/campaign.test.ts.
  */
@@ -520,7 +520,7 @@ const L7 = `
 :hint Launch pads throw you high — stay centred for the landing
 4|  ===  |
 1|  ^^^  |
-4|       |
+2|       |
 1|   *   |
 1|       |
 8|  ===  |
@@ -556,7 +556,7 @@ const L7 = `
 6|       |
 4|  ===  |
 4|  >>>  |
-7|       |
+6|       |
 6|  ===  |
 2|CCCCCCC|
 4|  ===  |

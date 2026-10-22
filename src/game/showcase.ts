@@ -6,6 +6,7 @@ import { TrackView } from '../render/trackView';
 import { Environment } from '../render/environment';
 import { buildShip, ShipModel } from '../render/ships';
 import { Particles } from '../render/particles';
+import { style } from '../render/style';
 import type { Renderer } from '../render/renderer';
 import type { VehicleId } from '../core/vehicles';
 import type { Customization } from '../core/save';
@@ -62,7 +63,7 @@ export class Showcase {
     this.shipId = vehicle;
     this.ship = buildShip(vehicle, custom);
     scene.add(this.ship.group);
-    this.particles = new Particles(800);
+    this.particles = new Particles(800, style().flat);
     scene.add(this.particles.points);
     this.particles.setViewportHeight(renderer.renderer.domElement.height);
     renderer.onResize = (_w, h) => this.particles.setViewportHeight(h);

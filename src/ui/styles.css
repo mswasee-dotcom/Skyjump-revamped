@@ -505,3 +505,79 @@ input[type='range'] { flex: 1.4; min-width: 140px; accent-color: var(--neon); he
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
 }
+
+/* ---------- pixel UI (retro looks) ---------- */
+html.pixel-ui { --display: 'Press Start 2P', 'Courier New', monospace; --cut: 0px; --neon: #ffe14a; --line: rgba(160, 176, 220, 0.5); }
+html.pixel-ui .panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(8, 10, 34, 0.94);
+  border: 2px solid var(--line);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.7);
+  clip-path: none;
+}
+html.pixel-ui .btn {
+  clip-path: none;
+  border: 2px solid var(--line);
+  background: #0c1036;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+}
+html.pixel-ui .btn:hover, html.pixel-ui .btn:focus-visible, html.pixel-ui .btn.focus, html.pixel-ui .btn.primary {
+  background: var(--neon);
+  border-color: #fff;
+  color: #10101e;
+  text-shadow: none;
+  transform: none;
+}
+html.pixel-ui .btn .hint { color: inherit; opacity: 0.7; }
+html.pixel-ui .btn.danger { background: #5a0f1e; }
+html.pixel-ui .icon-btn, html.pixel-ui .ship-tab, html.pixel-ui .fx, html.pixel-ui .swatch, html.pixel-ui .keybtn { clip-path: none; border-width: 2px; }
+html.pixel-ui .ship-tab { font-size: 10px; }
+html.pixel-ui .logo {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: #ffe14a;
+  filter: none;
+  font-size: clamp(28px, 6.5vw, 76px);
+  line-height: 1.15;
+  text-shadow: 4px 4px 0 #d8402a, 8px 8px 0 #2a1460;
+}
+html.pixel-ui .logo .line2 { color: #8fd8ff; letter-spacing: 0.08em; font-size: 0.55em; }
+html.pixel-ui .horizon-line { background: repeating-linear-gradient(90deg, #ffe14a 0 8px, transparent 8px 12px); box-shadow: none; height: 4px; }
+html.pixel-ui .logo-sub { font-size: 10px; letter-spacing: 0.2em; }
+html.pixel-ui .press-start { font-size: 12px; letter-spacing: 0.15em; animation: pulse 1s steps(2) infinite; }
+html.pixel-ui h2 { font-size: clamp(16px, 2.4vw, 24px); text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8); }
+html.pixel-ui h3 { font-size: 11px; letter-spacing: 0.1em; color: var(--neon); }
+html.pixel-ui .hud { text-shadow: 2px 2px 0 #000; }
+html.pixel-ui .hud .time { font-size: clamp(16px, 2.6vw, 26px); }
+html.pixel-ui .hud .score { font-size: clamp(13px, 2vw, 20px); }
+html.pixel-ui .hud .speed-num { font-size: clamp(18px, 3vw, 28px); text-shadow: 2px 2px 0 #000; }
+html.pixel-ui .hud .level-title { font-size: 10px; color: var(--neon); }
+html.pixel-ui .hud .label, html.pixel-ui .hud .speed-unit { font-size: 8px; letter-spacing: 0.15em; }
+html.pixel-ui .hud .lives i { border-radius: 0; transform: none; box-shadow: none; border-color: #ff4f6f; }
+html.pixel-ui .hud .lives i.on { background: #ff4f6f; }
+html.pixel-ui .hud .speed-bar { clip-path: none; height: 8px; border: 2px solid #000; }
+html.pixel-ui .hud .speed-bar i { background: repeating-linear-gradient(90deg, #ffe14a 0 6px, #d8402a 6px 8px); box-shadow: none; }
+html.pixel-ui .hud .progress i { background: #ffe14a; box-shadow: none; }
+html.pixel-ui .hud .chip { font-size: 8px; }
+html.pixel-ui .toast { font-size: 11px; letter-spacing: 0.08em; text-shadow: 2px 2px 0 #000; }
+html.pixel-ui .countdown { font-size: clamp(48px, 10vw, 110px); text-shadow: 6px 6px 0 #d8402a; color: #ffe14a; animation: none; }
+html.pixel-ui .level-card .num { font-size: 22px; color: var(--neon); text-shadow: 3px 3px 0 #000; }
+html.pixel-ui .level-card .name { font-size: 11px; line-height: 1.5; }
+html.pixel-ui .level-card .best { font-size: 9px; }
+html.pixel-ui .medal { border-radius: 0; }
+html.pixel-ui .results .big-time { font-size: clamp(20px, 3.5vw, 34px); }
+html.pixel-ui .breakdown div b, html.pixel-ui .breakdown .total { font-size: 11px; }
+html.pixel-ui .statbox .v { font-size: 16px; }
+html.pixel-ui .kbd, html.pixel-ui .seg button { font-size: 9px; }
+html.pixel-ui .badge, html.pixel-ui .unlock { font-size: 9px; }
+html.pixel-ui .touch .tbtn { border-radius: 0; border-width: 3px; font-size: 10px; }
+html.pixel-ui .legend-item b { font-size: 10px; }
+html.pixel-ui table.records th { font-size: 9px; }
+html.pixel-ui table.records td.mono { font-size: 10px; }
+html.pixel-ui .hud .label { display: block; margin-bottom: 8px; line-height: 1; }
+html.pixel-ui .hud .time, html.pixel-ui .hud .score { line-height: 1.1; }

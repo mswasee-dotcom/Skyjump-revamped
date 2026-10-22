@@ -21,15 +21,15 @@ export const PHYSICS_DT = 1 / PHYSICS_HZ;
 /** Never simulate more than this much time in one frame (tab switches, hitches). */
 export const MAX_FRAME_TIME = 0.1;
 
-export const GRAVITY = 32;
+export const GRAVITY = 36;
 /** Vertical distance the vehicle will step up onto without being stopped. */
 export const STEP_UP = 0.3;
 /** Vertical distance the vehicle will "stick" down to follow ramps while grounded. */
 export const SNAP_DOWN = 0.35;
 /** Grace period after leaving a ledge during which a jump is still allowed. */
-export const COYOTE_TIME = 0.1;
+export const COYOTE_TIME = 0.06;
 /** A jump pressed slightly before landing is remembered for this long. */
-export const JUMP_BUFFER = 0.12;
+export const JUMP_BUFFER = 0.08;
 /** Below this height the vehicle is considered lost in the void. */
 export const FALL_DEATH_Y = -18;
 
