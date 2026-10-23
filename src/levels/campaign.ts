@@ -31,6 +31,7 @@ const L1 = `
 6|  ===  |
 6| ===== |
 2|CCCCCCC|
+:item magnet
 :hint Press SPACE to jump over gaps
 6|  ===  |
 2|       |
@@ -61,6 +62,7 @@ const L1 = `
 8|  ===  |
 4| ===== |
 2|CCCCCCC|
+:item x2
 :hint Orbs are worth points. Weave to collect them!
 4|  ===  |
 4|  =o=  |
@@ -117,6 +119,7 @@ const L2 = `
 6|  bbb  |
 4|  ===  |
 2|CCCCCCC|
+:item wings
 :hint Stepping stones: keep your rhythm
 4|  ===  |
 2|       |
@@ -156,6 +159,7 @@ const L2 = `
 3|       |
 8|  ===  |
 2|CCCCCCC|
+:item shield
 :hint Gaps and offsets: aim your jump while airborne
 6|  ===  |
 3|       |
@@ -206,6 +210,7 @@ const L3 = `
 2|       |
 6|  ===  |
 2|CCCCCCC|
+:item nitro
 :hint White BOOST strips give a short burst of speed
 4|  ===  |
 1|  !!!  |
@@ -244,6 +249,7 @@ const L3 = `
 6|       |
 8|  ===  |
 2|CCCCCCC|
+:item x2
 :hint Drag plates then gaps: hold W to fight the slowdown
 4|  ===  |
 4|  <<<  |
@@ -290,6 +296,7 @@ const L4 = `
 6| ~~~~~ |
 4| ===== |
 2|CCCCCCC|
+:item shield
 6|~~~~~~~|
 3|~~~####|
 8|~~~~~~~|
@@ -320,6 +327,7 @@ const L4 = `
 4|=======|
 10|  ~~~  |
 2|CCCCCCC|
+:item magnet
 :hint Drifting lanes on ice: plan two moves ahead
 4|  ===  |
 4|  ~~~  |
@@ -368,6 +376,7 @@ const L5 = `
 4|=o=    |
 4| ===   |
 2|CCCCCCC|
+:item wings
 :hint Fragile stepping stones
 4|  ===  |
 2|       |
@@ -397,6 +406,7 @@ const L5 = `
 2|   *   |
 6|  ===  |
 2|CCCCCCC|
+:item nitro
 :hint The road is crumbling — and so are the blocks
 4|  ===  |
 6|  %%%  |
@@ -434,6 +444,7 @@ const L6 = `
 6|==xxxxx==|
 4|=========|
 2|CCCCCCCCC|
+:item shield
 :hint Moving blocks slide across the road — time your pass
 8|=========|
 :obs 4 3 2.6 2 2
@@ -464,6 +475,7 @@ const L6 = `
 :altend
 4|=========|
 2|CCCCCCCCC|
+:item life
 6|  =====  |
 :obs 4 2 1.5 1.5 3
 10|  =====  |
@@ -517,6 +529,7 @@ const L7 = `
 8|   =   |
 6|  ===  |
 2|CCCCCCC|
+:item nitro
 :hint Launch pads throw you high — stay centred for the landing
 4|  ===  |
 1|  ^^^  |
@@ -548,6 +561,7 @@ const L7 = `
 6|       |
 8|  ===  |
 2|CCCCCCC|
+:item x2
 :hint Full throttle — the gaps only get longer
 6|  >>>  |
 5|       |
@@ -587,6 +601,7 @@ const L8 = `
 :altend
 4|=========|
 2|CCCCCCCCC|
+:item wings
 6|  =====  |
 2|         |
 6|=== = ===|
@@ -609,6 +624,7 @@ const L8 = `
 :altend
 4|=========|
 2|CCCCCCCCC|
+:item magnet
 4|  =====  |
 6|  %%%%%  |
 2|         |
@@ -629,6 +645,7 @@ const L8 = `
 :altend
 4|=========|
 2|CCCCCCCCC|
+:item shield
 6|  =====  |
 3|         |
 4|  ==  =  |
@@ -637,6 +654,7 @@ const L8 = `
 3|         |
 6|  =====  |
 2|CCCCCCCCC|
+:item life
 8|=========|
 :obs 4 3.5 2.4 1.5 2
 6|=========|
@@ -678,6 +696,7 @@ const L9 = `
 @0
 8|  ===  |
 2|CCCCCCC|
+:item wings
 :hint Climb the staircase: jump from block to block
 4|  ===  |
 3|  bbb  |
@@ -708,6 +727,7 @@ const L9 = `
 3|       |
 12|  ===  |
 2|CCCCCCC|
+:item nitro
 @3
 4|  ===  |
 2|       |
@@ -767,6 +787,7 @@ const L10 = `
 6|  ~~~~~  |
 4|  =====  |
 2|CCCCCCCCC|
+:item shield
 6|  %%%%%  |
 2|         |
 4|  %%%%%  |
@@ -789,6 +810,7 @@ const L10 = `
 :altend
 4|=========|
 2|CCCCCCCCC|
+:item wings
 @2
 4|  =====  |
 1|  vvvvv  |
@@ -801,6 +823,7 @@ const L10 = `
 5|         |
 6|  =o=o=  |
 2|CCCCCCCCC|
+:item nitro
 6|  ~~~~~  |
 4|  ~#~#~  |
 6|  ~~~~~  |
@@ -819,6 +842,7 @@ const L10 = `
 6|         |
 6|  =====  |
 2|CCCCCCCCC|
+:item life
 :hint Last stretch. Hold your nerve
 4|  =====  |
 4|  x===x  |

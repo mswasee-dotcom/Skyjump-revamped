@@ -33,10 +33,14 @@ export class EndlessGenerator {
   private y = 0;
   private sinceCheckpoint = 0;
   private lastPattern = '';
+  /** Separate stream for power-ups, so they never change the road layout for a seed. */
+  private itemRand: () => number;
+  private sinceItem = 0;
 
   constructor(readonly seed: number) {
     this.track = new Track(ENDLESS_WIDTH);
     this.rand = rng(seed);
+    this.itemRand = rng((seed ^ 0x5bd1e995) >>> 0);
     this.emit(10, () => '=', 4, 4); // wide, safe start
     this.c = 4;
     this.hw = 2;
@@ -117,12 +121,36 @@ export class EndlessGenerator {
       if (pick <= 0) {
         this.lastPattern = name;
         fn();
-        // Every pattern ends with a short recovery stretch.
-        this.straight(3 + Math.round((1 - D) * 3));
+        // Every pattern ends with a short recovery stretch, sometimes carrying a power-up.
+        this.recovery(3 + Math.round((1 - D) * 3));
         return;
       }
     }
     this.pStraight();
+  }
+
+  private recovery(n: number): void {
+    this.sinceItem++;
+    const ir = this.itemRand;
+    if (this.sinceItem >= 3 && ir() < 0.22) {
+      this.sinceItem = 0;
+      const table: Array<[string, number]> = [['S', 3], ['W', 3], ['N', 3], ['M', 2], ['2', 2], ['H', 0.4]];
+      let pick = ir() * table.reduce((a, t) => a + t[1], 0);
+      let ch = 'S';
+      for (const [c, w] of table) {
+        pick -= w;
+        if (pick <= 0) {
+          ch = c;
+          break;
+        }
+      }
+      const lane = this.c - this.hw + Math.floor(ir() * (this.hw * 2 + 1));
+      this.emit(1, () => '=');
+      this.emit(1, (l) => (l === lane ? ch : '='));
+      this.straight(Math.max(1, n - 2));
+      return;
+    }
+    this.straight(n);
   }
 
   private pStraight(): void {

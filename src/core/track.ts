@@ -1,4 +1,5 @@
 import { BlockKind, TileType } from './tiles';
+import { ItemKind } from './items';
 import {
   HEIGHT_UNIT,
   LANE_WIDTH,
@@ -15,6 +16,8 @@ export interface Cell {
   rise: number;
   /** An energy orb sits above this cell. */
   orb: boolean;
+  /** A power-up floats above this cell (ItemKind.None for none). */
+  item?: ItemKind;
 }
 
 export interface Row {
@@ -84,10 +87,12 @@ export class Track {
   fragileState: Uint8Array = new Uint8Array(0);
   fragileTimer: Float32Array = new Float32Array(0);
   orbTaken: Uint8Array = new Uint8Array(0);
+  itemTaken: Uint8Array = new Uint8Array(0);
 
   /** Listeners notified when a fragile tile changes state, used by the renderer. */
   onFragileChange: ((row: number, lane: number, state: number) => void) | null = null;
   onOrbChange: ((row: number, lane: number, taken: boolean) => void) | null = null;
+  onItemChange: ((row: number, lane: number, taken: boolean) => void) | null = null;
 
   constructor(width: number) {
     this.width = width;
@@ -125,9 +130,12 @@ export class Track {
     ft.set(this.fragileTimer);
     const ot = new Uint8Array(cap);
     ot.set(this.orbTaken);
+    const it = new Uint8Array(cap);
+    it.set(this.itemTaken);
     this.fragileState = fs;
     this.fragileTimer = ft;
     this.orbTaken = ot;
+    this.itemTaken = it;
   }
 
   cell(row: number, lane: number): Cell {
@@ -198,8 +206,8 @@ export class Track {
   }
 
   /**
-   * Restore per-run state for rows >= fromRow. Collected orbs are only restored when
-   * `resetOrbs` is set (a full restart), so respawning can't be used to farm them.
+   * Restore per-run state for rows >= fromRow. Collected orbs and power-ups are only restored
+   * when `resetOrbs` is set (a full restart), so respawning can't be used to farm them.
    */
   resetState(fromRow = 0, resetOrbs = false): void {
     const start = Math.max(0, fromRow) * this.width;
@@ -212,6 +220,10 @@ export class Track {
       if (resetOrbs && this.orbTaken[i]) {
         this.orbTaken[i] = 0;
         this.onOrbChange?.(Math.floor(i / this.width), i % this.width, false);
+      }
+      if (resetOrbs && this.itemTaken[i]) {
+        this.itemTaken[i] = 0;
+        this.onItemChange?.(Math.floor(i / this.width), i % this.width, false);
       }
     }
   }
@@ -253,6 +265,23 @@ export class Track {
     return true;
   }
 
+  /** Collect the power-up on a cell. Returns its kind, or ItemKind.None if there is none left. */
+  takeItem(row: number, lane: number): ItemKind {
+    const c = this.cell(row, lane);
+    if (!c.item) return ItemKind.None;
+    const i = this.index(row, lane);
+    if (this.itemTaken[i]) return ItemKind.None;
+    this.itemTaken[i] = 1;
+    this.onItemChange?.(row, lane, true);
+    return c.item;
+  }
+
+  countItems(): number {
+    let n = 0;
+    for (const r of this.rows) for (const c of r.cells) if (c.item) n++;
+    return n;
+  }
+
   countOrbs(): number {
     let n = 0;
     for (const r of this.rows) for (const c of r.cells) if (c.orb) n++;
@@ -267,4 +296,13 @@ export function orbHeight(track: Track, row: number, lane: number): number {
   if (c.type === TileType.Empty) return base + 1.3;
   if (c.block === BlockKind.Low) return base + LOW_BLOCK_HEIGHT + 0.7;
   return base + 0.7 + Math.max(0, c.rise) * 0.5;
+}
+
+/** Height at which a power-up floats over its cell. */
+export function itemHeight(track: Track, row: number, lane: number): number {
+  const c = track.cell(row, lane);
+  const base = track.rowY(row);
+  if (c.type === TileType.Empty) return base + 1.3;
+  if (c.block === BlockKind.Low) return base + LOW_BLOCK_HEIGHT + 0.8;
+  return base + 0.8 + Math.max(0, c.rise) * 0.5;
 }

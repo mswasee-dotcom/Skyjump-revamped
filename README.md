@@ -45,6 +45,7 @@ Your ship flies forward on its own. Steer, accelerate or brake, and jump to reac
 | Accelerate | W or ↑ | RT | ▲ button |
 | Brake | S or ↓ | LT | ▼ button |
 | Jump | Space or J | A | JUMP button |
+| Fire nitro | E or Left Shift | X or RB | NITRO button |
 | Pause | Esc or P | Start | ❚❚ button |
 | Restart | R | Y | Pause menu |
 
@@ -66,6 +67,21 @@ All keys can be remapped in **Settings → Controls**. Touch buttons appear auto
 | Wall | Tall block — steer around it |
 
 Plus moving blocks that slide across the road, ramps, drop-offs and floating energy orbs.
+
+### Power-ups
+
+Floating badges on the road. Fly through one to collect it (+50 points). Each sector places a few, and endless mode drops them now and then.
+
+| Power-up | Effect |
+|---|---|
+| Shield (blue) | Survive one crash into a wall, plasma or a moving block, then phase through for a second. Falling still counts. |
+| Wings (white) | Press jump again in mid-air for an extra jump. Hold up to two. |
+| Nitro (orange) | Stored speed burst past top speed; fire it with E. Hold up to two. |
+| Magnet (red) | Pulls in energy orbs from two lanes away for 8 s. |
+| 2× Score (yellow) | Every point counts double for 10 s. |
+| Extra Life (pink, rare) | One more life, up to two above the sector's starting lives. |
+
+Shields, wings and nitro you are holding survive a crash; timed effects end. Respawning never brings back power-ups you already took.
 
 ### Scoring and medals
 
@@ -118,7 +134,7 @@ scripts/         browser smoke tests (Playwright) and level-design probes
 ## Testing
 
 ```bash
-npm test             # 85 unit tests: DSL, physics, collisions, every tile, save repair, progression, scoring, levels, endless generator
+npm test             # 104 unit tests: DSL, physics, collisions, every tile, power-ups, save repair, progression, scoring, levels, endless generator
 npm run test:levels  # slow (~6 min): the autopilot drives all 10 sectors start to finish with the real physics
 SHIPS=comet,wisp,bastion npm run test:levels   # ...with every ship
 ```
@@ -146,6 +162,8 @@ Layouts live in `src/levels/campaign.ts`. One line per row, in driving order:
 |  ~x%  |           ice, plasma, fragile
 |  b#o* |           low block, wall, orb on a tile, orb floating over the void
 |  /v   |           ramp up / ramp down (raises/lowers following rows)
+|  SWN2MH|          power-ups on a tile: shield, wings, nitro, 2×, magnet, life
+:item wings [LANE]  put a power-up on the next row (nearest the centre if no lane)
 @2                  set floor height for following rows
 2|CCCCCCC|          checkpoint
 3|FFFFFFF|          finish

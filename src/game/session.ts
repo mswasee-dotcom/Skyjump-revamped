@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BOOST_DURATION, MAX_FRAME_TIME, PHYSICS_DT, ROW_LENGTH } from '../core/constants';
-import { DriveInput, PhysicsEvent, VehicleState, spawnState, stepVehicle, DEFAULT_TUNING, PhysicsTuning } from '../core/physics';
+import { DriveInput, PhysicsEvent, VehicleState, spawnState, stepVehicle, DEFAULT_TUNING, PhysicsTuning, carryItems } from '../core/physics';
+import { EXTRA_LIVES_CAP, ITEM_INFO, ItemKind, MAGNET_DURATION, MULTIPLIER_DURATION, info as itemInfo } from '../core/items';
 import { ScoreKeeper, POINTS, medalFor } from '../core/scoring';
 import { TileType } from '../core/tiles';
 import { Track, laneToX, xToLane } from '../core/track';
@@ -111,6 +112,10 @@ export class Session {
   private rowPointsAwarded = 0;
   private totalOrbs: number;
   private jumpQueued = false;
+  private nitroQueued = false;
+  private itemsExplained = new Set<ItemKind>();
+  private shieldMat: THREE.MeshBasicMaterial;
+  private shieldMesh: THREE.Mesh;
   private trailHue = 0;
   private emitAcc = 0;
   private finishedResult: RunResult | null = null;
@@ -159,6 +164,14 @@ export class Session {
     this.shock.rotation.x = -Math.PI / 2;
     scene.add(this.shock);
 
+    // Shield bubble around the ship (shown while a shield is equipped, flickers while phasing).
+    this.shieldMat = new THREE.MeshBasicMaterial({ color: ITEM_INFO[ItemKind.Shield].color, transparent: true, opacity: 0.22, depthWrite: false, toneMapped: false, wireframe: style().flat });
+    this.shieldMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.15, 1), this.shieldMat);
+    this.shieldMesh.scale.set(1.15, 0.6, 1.5);
+    this.shieldMesh.position.y = 0.3;
+    this.shieldMesh.visible = false;
+    this.ship.group.add(this.shieldMesh);
+
     this.rig = new CameraRig(renderer.camera, () => renderer.baseFov);
     this.rig.stiffness = cfg.cameraStiffness;
     this.rig.shakeScale = cfg.reducedShake ? 0.25 : 1;
@@ -188,6 +201,11 @@ export class Session {
   /** Called by the game when the jump button is pressed; applied on the next physics step. */
   queueJump(): void {
     if (this.phase === 'racing') this.jumpQueued = true;
+  }
+
+  /** Called by the game when the nitro button is pressed; applied on the next physics step. */
+  queueNitro(): void {
+    if (this.phase === 'racing') this.nitroQueued = true;
   }
 
   private copyPrev(): void {
@@ -272,8 +290,10 @@ export class Session {
       }
       return;
     }
-    const inp: DriveInput = { steer: input.steer, throttle: input.throttle, jumpPressed: this.jumpQueued };
+    const inp: DriveInput = { steer: input.steer, throttle: input.throttle, jumpPressed: this.jumpQueued || input.jumpPressed, nitroPressed: this.nitroQueued || !!input.nitroPressed };
     this.jumpQueued = false;
+    this.nitroQueued = false;
+    this.score.multiplier = s.multTimer > 0 ? 2 : 1;
     this.events.length = 0;
     stepVehicle(s, inp, this.vehicle, this.track, this.time, PHYSICS_DT, this.events, this.cfg.tuning ?? DEFAULT_TUNING);
     this.time += PHYSICS_DT;
@@ -312,7 +332,10 @@ export class Session {
     switch (e.type) {
       case 'jump':
         this.stats.jumps++;
-        if (e.launchPad) {
+        if (e.airJump) {
+          this.audio.airJump();
+          this.particles.emit({ x: pos.x, y: pos.y, z: pos.z, ring: 3.5, spread: 0.4, count: 22, color: ITEM_INFO[ItemKind.Wings].color, color2: custom.trail, size: 0.32, life: 0.45, gravity: 4 });
+        } else if (e.launchPad) {
           this.audio.launch();
           this.particles.emit({ x: pos.x, y: pos.y + 0.1, z: pos.z, ring: 4, spread: 0.6, count: 26, color: '#ffe14a', color2: '#ffffff', size: 0.4, life: 0.5 });
           this.rig.addShake(0.2);
@@ -342,6 +365,37 @@ export class Session {
       case 'orb':
         this.audio.orb();
         this.particles.emit({ x: laneToX(e.lane, this.track.width), y: pos.y + 0.8, z: -(e.row + 0.5) * ROW_LENGTH, spread: 2.5, count: 18, color: '#7dfcff', color2: '#ffffff', size: 0.25, life: 0.5, drag: 2 });
+        break;
+      case 'item': {
+        const inf = itemInfo(e.kind);
+        this.audio.pickup(e.kind);
+        this.particles.emit({ x: laneToX(e.lane, this.track.width), y: pos.y + 0.8, z: -(e.row + 0.5) * ROW_LENGTH, ring: 3, spread: 1.5, count: 34, color: inf.color, color2: '#ffffff', size: 0.34, life: 0.6, drag: 2 });
+        if (e.kind === ItemKind.Life) {
+          const cap = this.maxLives + EXTRA_LIVES_CAP;
+          if (this.lives < cap) {
+            this.lives++;
+            this.cb.toast('+1 LIFE', 'good');
+          } else this.cb.toast('LIVES FULL', 'info');
+        } else {
+          const extra = e.kind === ItemKind.Magnet ? ` ${MAGNET_DURATION}s` : e.kind === ItemKind.Multiplier ? ` ${MULTIPLIER_DURATION}s` : '';
+          this.cb.toast(`${inf.short}${extra}`, 'good');
+        }
+        if (!this.itemsExplained.has(e.kind)) {
+          this.itemsExplained.add(e.kind);
+          this.cb.hint(`${inf.name.toUpperCase()}: ${inf.description}`);
+        }
+        break;
+      }
+      case 'shieldHit':
+        this.audio.shieldBreak();
+        this.rig.addShake(0.45);
+        this.particles.emit({ x: pos.x, y: pos.y + 0.3, z: pos.z, spread: 5, vy: 2, count: 50, color: ITEM_INFO[ItemKind.Shield].color, color2: '#ffffff', size: 0.3, life: 0.6, gravity: 5 });
+        this.cb.toast('SHIELD SAVED YOU', 'good');
+        break;
+      case 'nitro':
+        this.audio.nitro();
+        this.rig.addShake(0.2);
+        this.particles.emit({ x: pos.x, y: pos.y + 0.2, z: pos.z, vz: 9, spread: 2.2, count: 40, color: ITEM_INFO[ItemKind.Nitro].color, color2: '#ffffff', size: 0.4, life: 0.5 });
         break;
       case 'checkpoint':
         this.audio.checkpoint();
@@ -396,7 +450,9 @@ export class Session {
     const cp = this.state.lastCheckpoint;
     this.track.resetState(cp);
     // Re-show orbs collected after the checkpoint? They stay collected: no farming.
+    const old = this.state;
     this.state = spawnState(this.track, cp, this.vehicle);
+    carryItems(old, this.state); // stored wings/nitro survive a crash; timed effects end
     this.copyPrev();
     this.ship.group.visible = true;
     this.particles.clear();
@@ -404,6 +460,7 @@ export class Session {
     this.setPhase('respawn');
     this.cb.toast(this.lives === 1 ? 'LAST LIFE' : 'GET READY', this.lives === 1 ? 'bad' : 'info');
     this.jumpQueued = false;
+    this.nitroQueued = false;
   }
 
   private onFinish(): void {
@@ -431,8 +488,10 @@ export class Session {
         { label: `Distance ${Math.round(this.stats.distance)} m`, points: this.rowPointsAwarded },
         { label: `Energy orbs ×${this.score.orbs}`, points: this.score.orbs * POINTS.orb },
         { label: `Clean landings ×${this.score.cleanLandings}`, points: this.score.cleanLandings * POINTS.cleanLanding },
-        { label: `Crashes ×${this.score.crashes}`, points: this.score.crashes * POINTS.crash },
       ];
+      if (this.score.items > 0) breakdown.push({ label: `Power-ups ×${this.score.items}`, points: this.score.items * POINTS.item });
+      if (this.score.multBonus > 0) breakdown.push({ label: '2× Score bonus', points: this.score.multBonus });
+      breakdown.push({ label: `Crashes ×${this.score.crashes}`, points: this.score.crashes * POINTS.crash });
     }
     return {
       levelId: def?.id ?? 0,
@@ -545,6 +604,15 @@ export class Session {
       }
     }
 
+    // Shield bubble; the ship flickers while phasing after a shield hit.
+    this.shieldMesh.visible = (s.shield > 0 || s.ghost > 0) && s.alive;
+    if (this.shieldMesh.visible) {
+      this.shieldMesh.rotation.y += dt * 0.8;
+      this.shieldMat.opacity = s.ghost > 0 ? 0.12 + 0.12 * Math.sin(this.time * 40) : (style().flat ? 0.4 : 0.2) + 0.05 * Math.sin(this.time * 4);
+    }
+    if (s.alive && this.phase === 'racing') this.ship.body.visible = s.ghost <= 0 || Math.sin(this.time * 50) > -0.3;
+    else this.ship.body.visible = true;
+
     // Crash shockwave
     if (this.shockT >= 0) {
       this.shockT += dt;
@@ -589,6 +657,12 @@ export class Session {
     if (s.grounded && s.surface === TileType.Accel) out.push('ACCEL');
     if (s.grounded && s.surface === TileType.Slow) out.push('DRAG');
     if (s.grounded && s.surface === TileType.Fragile) out.push('FRAGILE');
+    if (s.shield > 0) out.push('SHIELD');
+    if (s.ghost > 0) out.push('PHASE');
+    if (s.magnetTimer > 0) out.push(`MAGNET ${Math.ceil(s.magnetTimer)}`);
+    if (s.multTimer > 0) out.push(`2× ${Math.ceil(s.multTimer)}`);
+    if (s.wings > 0) out.push(`WINGS ×${s.wings}`);
+    if (s.nitro > 0) out.push(`NITRO ×${s.nitro}`);
     return out;
   }
 
@@ -609,6 +683,8 @@ export class Session {
     this.ship.dispose();
     this.particles.dispose();
     this.shock.geometry.dispose();
+    this.shieldMesh.geometry.dispose();
+    this.shieldMat.dispose();
     this.shockMat.dispose();
     this.renderer.onResize = null;
     this.audio.stopEngine();

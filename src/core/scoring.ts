@@ -12,6 +12,8 @@ export const POINTS = {
   timePerSecond: 60,
   /** Endless: per row travelled. */
   endlessPerRow: 10,
+  /** Per power-up collected. */
+  item: 50,
 };
 
 export interface ScoreBreakdown {
@@ -27,6 +29,11 @@ export class ScoreKeeper {
   altBonus = 0;
   altRoutes: string[] = [];
   jumps = 0;
+  items = 0;
+  /** Points earned from a 2× multiplier (shown as its own results line). */
+  multBonus = 0;
+  /** Set by the session while a 2× Score power-up is active. */
+  multiplier = 1;
   private running = 0;
 
   /** Score shown on the HUD while racing. */
@@ -50,23 +57,36 @@ export class ScoreKeeper {
       case 'jump':
         this.jumps++;
         break;
+      case 'item':
+        this.items++;
+        pts = POINTS.item;
+        break;
       case 'crash':
         this.crashes++;
         pts = POINTS.crash;
         break;
     }
+    pts = this.boost(pts);
     this.running += pts;
     return pts;
+  }
+
+  /** Apply the active multiplier to positive points, remembering the extra. */
+  private boost(pts: number): number {
+    if (pts <= 0 || this.multiplier <= 1) return pts;
+    const extra = Math.round(pts * (this.multiplier - 1));
+    this.multBonus += extra;
+    return pts + extra;
   }
 
   addAlt(label: string, bonus: number): void {
     this.altBonus += bonus;
     this.altRoutes.push(label);
-    this.running += bonus;
+    this.running += this.boost(bonus);
   }
 
   addDistance(points: number): void {
-    this.running += points;
+    this.running += this.boost(points);
   }
 
   /** Final campaign score with a breakdown for the results screen. */
@@ -78,6 +98,8 @@ export class ScoreKeeper {
       { label: `Clean landings ×${this.cleanLandings}`, points: this.cleanLandings * POINTS.cleanLanding },
       { label: 'Speed bonus', points: Math.round(highSpeedTime * POINTS.speedPerSecond) },
     ];
+    if (this.items > 0) breakdown.push({ label: `Power-ups ×${this.items}`, points: this.items * POINTS.item });
+    if (this.multBonus > 0) breakdown.push({ label: '2× Score bonus', points: this.multBonus });
     if (this.altBonus > 0) breakdown.push({ label: `Risky routes ×${this.altRoutes.length}`, points: this.altBonus });
     if (this.crashes === 0) breakdown.push({ label: 'Flawless run', points: POINTS.flawless });
     else breakdown.push({ label: `Crashes ×${this.crashes}`, points: this.crashes * POINTS.crash });

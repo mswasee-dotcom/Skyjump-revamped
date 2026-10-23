@@ -94,6 +94,7 @@ export class Game {
         return;
       } else {
         if (this.input.consume('jump')) this.session.queueJump();
+        if (this.input.consume('nitro')) this.session.queueNitro();
         this.session.frame(dt, this.input.drive());
         this.ui.updateHud(this.session.hud(), this.fps);
         this.save.stats.playSeconds += dt;

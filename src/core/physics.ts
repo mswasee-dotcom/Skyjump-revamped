@@ -18,7 +18,17 @@ import {
   VEHICLE_HEIGHT,
 } from './constants';
 import { TileType } from './tiles';
-import { Track, laneToX, orbHeight, xToLane } from './track';
+import { Track, itemHeight, laneToX, orbHeight, xToLane } from './track';
+import {
+  AIR_JUMP_FACTOR,
+  ItemKind,
+  MAGNET_DURATION,
+  MAX_NITRO,
+  MAX_WINGS,
+  MULTIPLIER_DURATION,
+  NITRO_DURATION,
+  SHIELD_GHOST,
+} from './items';
 import type { VehicleStats } from './vehicles';
 
 export interface DriveInput {
@@ -28,6 +38,8 @@ export interface DriveInput {
   throttle: number;
   /** True only on the step the jump button was pressed. */
   jumpPressed: boolean;
+  /** True only on the step the nitro button was pressed. */
+  nitroPressed?: boolean;
 }
 
 export const NO_INPUT: DriveInput = { steer: 0, throttle: 0, jumpPressed: false };
@@ -35,7 +47,10 @@ export const NO_INPUT: DriveInput = { steer: 0, throttle: 0, jumpPressed: false 
 export type CrashCause = 'wall' | 'hazard' | 'obstacle' | 'fall';
 
 export type PhysicsEvent =
-  | { type: 'jump'; launchPad: boolean }
+  | { type: 'jump'; launchPad: boolean; airJump?: boolean }
+  | { type: 'item'; kind: ItemKind; row: number; lane: number }
+  | { type: 'shieldHit'; cause: CrashCause }
+  | { type: 'nitro' }
   | { type: 'land'; airTime: number; clean: boolean; hard: boolean }
   | { type: 'boost' }
   | { type: 'scrape' }
@@ -71,6 +86,24 @@ export interface VehicleState {
   lastBoostCell: number;
   /** Total seconds spent above 90% of top speed (score bonus). */
   highSpeedTime: number;
+  // ---- Power-ups ----
+  /** 1 while a shield is equipped. */
+  shield: number;
+  /** Seconds left of phase-through after a shield absorbed a hit. */
+  ghost: number;
+  magnetTimer: number;
+  multTimer: number;
+  /** Mid-air jumps available. */
+  wings: number;
+  /** Stored nitro charges. */
+  nitro: number;
+}
+
+/** Power-up state carried across a respawn (a crash keeps what you had stored, timers expire). */
+export function carryItems(from: VehicleState, to: VehicleState): void {
+  to.shield = from.shield;
+  to.wings = from.wings;
+  to.nitro = from.nitro;
 }
 
 export interface PhysicsTuning {
@@ -106,6 +139,12 @@ export function spawnState(track: Track, row: number, stats: VehicleStats): Vehi
     lastCheckpoint: row,
     lastBoostCell: -1,
     highSpeedTime: 0,
+    shield: 0,
+    ghost: 0,
+    magnetTimer: 0,
+    multTimer: 0,
+    wings: 0,
+    nitro: 0,
   };
 }
 
@@ -225,6 +264,16 @@ export function stepVehicle(
   s.jumpBuffer = Math.max(0, s.jumpBuffer - dt);
   if (input.jumpPressed) s.jumpBuffer = JUMP_BUFFER;
   if (s.boostTimer > 0) s.boostTimer = Math.max(0, s.boostTimer - dt);
+  if (s.ghost > 0) s.ghost = Math.max(0, s.ghost - dt);
+  if (s.magnetTimer > 0) s.magnetTimer = Math.max(0, s.magnetTimer - dt);
+  if (s.multTimer > 0) s.multTimer = Math.max(0, s.multTimer - dt);
+  if (input.nitroPressed && s.nitro > 0) {
+    s.nitro--;
+    s.boostTimer = Math.max(s.boostTimer, NITRO_DURATION);
+    // Straight past top speed, whatever speed you were doing.
+    s.speed = Math.min(stats.maxSpeed + BOOST_BONUS_SPEED, Math.max(s.speed + BOOST_BONUS_SPEED, stats.maxSpeed + 3));
+    events.push({ type: 'nitro' });
+  }
 
   // ---- Forward speed -------------------------------------------------------
   const boosting = s.boostTimer > 0;
@@ -271,11 +320,17 @@ export function stepVehicle(
     s.jumpBuffer = 0;
     s.airTime = 0;
     events.push({ type: 'jump', launchPad: false });
+  } else if (input.jumpPressed && !s.grounded && s.wings > 0 && !s.lost) {
+    // Wings: one extra jump in mid-air.
+    s.wings--;
+    s.vy = stats.jumpImpulse * AIR_JUMP_FACTOR;
+    s.jumpBuffer = 0;
+    events.push({ type: 'jump', launchPad: false, airJump: true });
   }
 
   // ---- Forward movement + head-on collisions ---------------------------------
   const newD = s.d + s.speed * dt;
-  const fwd = hullBlocked(track, s.x, newD, s.y);
+  const fwd = s.ghost > 0 ? { blocked: false, side: 0 } : hullBlocked(track, s.x, newD, s.y);
   if (fwd.blocked) {
     // Clipping a block with one wingtip nudges the ship aside; anything more is a crash.
     const nudged = fwd.side !== 0 ? s.x - fwd.side * 0.22 : s.x;
@@ -284,6 +339,9 @@ export function stepVehicle(
       s.vx = -fwd.side * Math.abs(s.vx) * 0.3;
       s.d = newD;
       events.push({ type: 'scrape' });
+    } else if (absorb(s, events, 'wall')) {
+      s.d = newD;
+      s.speed = Math.max(MIN_SPEED, s.speed * 0.6);
     } else {
       crash(s, events, 'wall');
       return;
@@ -294,14 +352,14 @@ export function stepVehicle(
 
   // ---- Lateral movement + side collisions -------------------------------------
   const newX = s.x + s.vx * dt;
-  if (hullBlocked(track, newX, s.d, s.y).blocked) {
+  if (s.ghost <= 0 && hullBlocked(track, newX, s.d, s.y).blocked) {
     if (Math.abs(s.vx) > 2) events.push({ type: 'scrape' });
     s.vx = -s.vx * 0.25;
   } else {
     s.x = newX;
   }
 
-  if (obstacleHit(track, s.x, s.d, s.y, time)) {
+  if (s.ghost <= 0 && obstacleHit(track, s.x, s.d, s.y, time) && !absorb(s, events, 'obstacle')) {
     crash(s, events, 'obstacle');
     return;
   }
@@ -368,7 +426,7 @@ export function stepVehicle(
       const c = track.cellCoords(s.x + ox, s.d + od);
       track.touchFragile(c.row, c.lane, tuning.fragileDelay);
     }
-    if (surface === TileType.Hazard) {
+    if (surface === TileType.Hazard && s.ghost <= 0 && !absorb(s, events, 'hazard')) {
       crash(s, events, 'hazard');
       return;
     }
@@ -387,15 +445,36 @@ export function stepVehicle(
     if (s.grounded) events.push({ type: 'surface', tile: surface });
   }
 
-  // ---- Orbs ------------------------------------------------------------------------
-  for (let r = row - 1; r <= row + 1; r++) {
-    for (let l = lane - 1; l <= lane + 1; l++) {
+  // ---- Orbs (a magnet widens the pickup to two lanes either side) ---------------------
+  const magnet = s.magnetTimer > 0;
+  const reachL = magnet ? 2 : 1;
+  const reachR = magnet ? 2 : 1;
+  for (let r = row - reachR; r <= row + reachR; r++) {
+    for (let l = lane - reachL; l <= lane + reachL; l++) {
       if (!track.cell(r, l).orb) continue;
       const ox = laneToX(l, track.width);
       const od = r * ROW_LENGTH + ROW_LENGTH / 2;
       const oy = orbHeight(track, r, l);
-      if (Math.abs(ox - s.x) < 0.75 && Math.abs(od - s.d) < 1.0 && Math.abs(oy - (s.y + 0.25)) < 1.1) {
-        if (track.takeOrb(r, l)) events.push({ type: 'orb', row: r, lane: l });
+      const hit = magnet
+        ? Math.abs(ox - s.x) < 2.8 && Math.abs(od - s.d) < 2.6 && Math.abs(oy - (s.y + 0.25)) < 2.5
+        : Math.abs(ox - s.x) < 0.75 && Math.abs(od - s.d) < 1.0 && Math.abs(oy - (s.y + 0.25)) < 1.1;
+      if (hit && track.takeOrb(r, l)) events.push({ type: 'orb', row: r, lane: l });
+    }
+  }
+
+  // ---- Power-ups ---------------------------------------------------------------------
+  for (let r = row - 1; r <= row + 1; r++) {
+    for (let l = lane - 1; l <= lane + 1; l++) {
+      if (!track.cell(r, l).item) continue;
+      const ix = laneToX(l, track.width);
+      const id = r * ROW_LENGTH + ROW_LENGTH / 2;
+      const iy = itemHeight(track, r, l);
+      if (Math.abs(ix - s.x) < 0.8 && Math.abs(id - s.d) < 1.1 && Math.abs(iy - (s.y + 0.25)) < 1.3) {
+        const kind = track.takeItem(r, l);
+        if (kind !== ItemKind.None) {
+          applyItem(s, kind);
+          events.push({ type: 'item', kind, row: r, lane: l });
+        }
       }
     }
   }
@@ -422,6 +501,38 @@ export function stepVehicle(
     }
   }
   if (s.y < FALL_DEATH_Y + Math.min(0, track.rowY(row))) crash(s, events, 'fall');
+}
+
+/** Apply a collected power-up to the vehicle. Extra lives are handled by the game session. */
+export function applyItem(s: VehicleState, kind: ItemKind): void {
+  switch (kind) {
+    case ItemKind.Shield:
+      s.shield = 1;
+      break;
+    case ItemKind.Magnet:
+      s.magnetTimer = MAGNET_DURATION;
+      break;
+    case ItemKind.Wings:
+      s.wings = Math.min(MAX_WINGS, s.wings + 1);
+      break;
+    case ItemKind.Nitro:
+      s.nitro = Math.min(MAX_NITRO, s.nitro + 1);
+      break;
+    case ItemKind.Multiplier:
+      s.multTimer = MULTIPLIER_DURATION;
+      break;
+    default:
+      break;
+  }
+}
+
+/** A shield absorbs one crash (never a fall) and grants a short phase-through window. */
+function absorb(s: VehicleState, events: PhysicsEvent[], cause: CrashCause): boolean {
+  if (s.shield <= 0) return false;
+  s.shield = 0;
+  s.ghost = SHIELD_GHOST;
+  events.push({ type: 'shieldHit', cause });
+  return true;
 }
 
 function crash(s: VehicleState, events: PhysicsEvent[], cause: CrashCause): void {

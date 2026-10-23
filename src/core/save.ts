@@ -1,13 +1,14 @@
 import { VEHICLE_ORDER, VehicleId } from './vehicles';
 
-export type Action = 'left' | 'right' | 'accel' | 'brake' | 'jump' | 'pause' | 'restart';
-export const ACTIONS: Action[] = ['left', 'right', 'accel', 'brake', 'jump', 'pause', 'restart'];
+export type Action = 'left' | 'right' | 'accel' | 'brake' | 'jump' | 'nitro' | 'pause' | 'restart';
+export const ACTIONS: Action[] = ['left', 'right', 'accel', 'brake', 'jump', 'nitro', 'pause', 'restart'];
 export const ACTION_LABELS: Record<Action, string> = {
   left: 'Steer left',
   right: 'Steer right',
   accel: 'Accelerate',
   brake: 'Brake',
   jump: 'Jump',
+  nitro: 'Fire nitro',
   pause: 'Pause',
   restart: 'Restart',
 };
@@ -19,6 +20,7 @@ export const DEFAULT_KEYS: Record<Action, string[]> = {
   accel: ['KeyW', 'ArrowUp'],
   brake: ['KeyS', 'ArrowDown'],
   jump: ['Space', 'KeyJ'],
+  nitro: ['KeyE', 'ShiftLeft'],
   pause: ['Escape', 'KeyP'],
   restart: ['KeyR', ''],
 };

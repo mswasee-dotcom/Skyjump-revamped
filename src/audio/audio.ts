@@ -227,6 +227,28 @@ export class AudioEngine {
     this.tone('sine', base * 1.5, base * 1.5, 0.18, 0.08, undefined, 0.05);
   }
 
+  /** Power-up collected: a rising arpeggio, with a different top note per kind. */
+  pickup(kind: number): void {
+    const top = [0, 7, 3, 12, 10, 5, 16][kind] ?? 7;
+    [0, 4, 7, top + 12].forEach((st, i) => this.tone('square', midi(72 + st), midi(72 + st), 0.1, 0.07, undefined, i * 0.045));
+    this.tone('sine', midi(60), midi(72), 0.25, 0.08);
+  }
+
+  airJump(): void {
+    this.tone('triangle', 520, 1250, 0.2, 0.12);
+    this.noiseBurst(0.18, 0.05, 'bandpass', 2500, 5000, 2);
+  }
+
+  shieldBreak(): void {
+    this.tone('square', 900, 200, 0.35, 0.1);
+    this.noiseBurst(0.35, 0.1, 'highpass', 3000, 1200, 1);
+  }
+
+  nitro(): void {
+    this.tone('sawtooth', 110, 660, 0.5, 0.1);
+    this.noiseBurst(0.6, 0.12, 'bandpass', 600, 3000, 1.5);
+  }
+
   checkpoint(): void {
     [0, 4, 7].forEach((s, i) => this.tone('triangle', midi(76 + s), midi(76 + s), 0.18, 0.12, undefined, i * 0.07));
   }

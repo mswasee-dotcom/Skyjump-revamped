@@ -25,6 +25,9 @@ A SkyRoads-inspired 3D browser racer. TypeScript + Three.js + Vite, no backend. 
 8. **Every UI control must do something.** No dead buttons.
 9. Respawns call `track.resetState(checkpoint)` without restoring orbs (no farming); a full restart creates a new Session.
 
+## Power-ups
+`src/core/items.ts` (kinds, tuning) → cells carry `item`; `track.itemTaken` mirrors `orbTaken` (not restored on respawn). Effects live in `physics.ts` (`applyItem`, `absorb` for shields; wings = mid-air jump; nitro = `DriveInput.nitroPressed`). Extra life and the score multiplier are handled by `Session`/`ScoreKeeper`. Endless items use a separate RNG stream so they never change the road for a seed. The autopilot saves/restores `itemTaken` around rollouts — any new per-run track state must be added there too.
+
 ## Visual style
 Default look is `arcade` (src/render/style.ts): Lambert flat-shaded tiles with textures from `retroTextures.ts`, no bloom, pixel font UI (`html.pixel-ui`). `neon` is the alternative. Keep standard-tile tints away from special-tile colours (tested).
 

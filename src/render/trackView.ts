@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { BlockKind, TileType, TILE_INFO } from '../core/tiles';
-import { Track, laneToX, orbHeight } from '../core/track';
+import { Track, itemHeight, laneToX, orbHeight } from '../core/track';
+import { ItemKind } from '../core/items';
+import { itemIconCanvas } from './itemIcons';
 import {
   HEIGHT_UNIT,
   LANE_WIDTH,
@@ -36,6 +38,7 @@ interface Chunk {
   orbs: Map<number, InstanceRef>;
   orbMesh: THREE.InstancedMesh | null;
   orbBase: Array<{ cell: number; x: number; y: number; z: number }>;
+  items: Map<number, { sprite: THREE.Sprite; y: number }>;
 }
 
 /** Materials shared by every chunk of a track. Built once per theme. */
@@ -183,6 +186,22 @@ export class TrackView {
     }
     track.onFragileChange = (row, lane, state) => this.fragileChanged(row, lane, state);
     track.onOrbChange = (row, lane, taken) => this.orbChanged(row, lane, taken);
+    track.onItemChange = (row, lane, taken) => {
+      const it = this.chunks.get(Math.floor(row / CHUNK_ROWS))?.items.get(this.track.index(row, lane));
+      if (it) it.sprite.visible = !taken;
+    };
+  }
+
+  /** One sprite material per power-up kind, built on first use. */
+  private itemMats = new Map<ItemKind, THREE.SpriteMaterial>();
+  private itemMat(kind: ItemKind): THREE.SpriteMaterial {
+    let m = this.itemMats.get(kind);
+    if (!m) {
+      const tex = canvasTexture(itemIconCanvas(kind, 128));
+      m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
+      this.itemMats.set(kind, m);
+    }
+    return m;
   }
 
   /** Stream chunks around the given forward distance and animate dynamic parts. */
@@ -235,6 +254,16 @@ export class TrackView {
         ch.orbMesh.setMatrixAt(k, this.tmp);
       }
       ch.orbMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // Power-ups bob and pulse
+    for (const ch of this.chunks.values()) {
+      for (const [cell, it] of ch.items) {
+        if (!it.sprite.visible) continue;
+        it.sprite.position.y = it.y + Math.sin(time * 2.6 + cell) * 0.12;
+        const k = 1.1 + Math.sin(time * 5 + cell) * 0.06;
+        it.sprite.scale.set(k, k, 1);
+      }
     }
 
     // Cracking fragile tiles flicker
@@ -418,8 +447,24 @@ export class TrackView {
 
     for (const g of gates) group.add(this.buildGate(g.row, g.finish));
 
+    const items: Chunk['items'] = new Map();
+    for (let r = r0; r < r1; r++) {
+      for (let l = 0; l < t.width; l++) {
+        const kind = t.rows[r].cells[l].item;
+        if (!kind) continue;
+        const cell = t.index(r, l);
+        const sprite = new THREE.Sprite(this.itemMat(kind));
+        const y = itemHeight(t, r, l);
+        sprite.position.set(laneToX(l, t.width), y, -(r + 0.5) * ROW_LENGTH);
+        sprite.scale.set(1.1, 1.1, 1);
+        sprite.visible = !t.itemTaken[cell];
+        group.add(sprite);
+        items.set(cell, { sprite, y });
+      }
+    }
+
     this.group.add(group);
-    return { index, group, meshes, fragile, orbs, orbMesh, orbBase };
+    return { index, group, meshes, fragile, orbs, orbMesh, orbBase, items };
   }
 
   private buildGate(row: number, finish: boolean): THREE.Group {
@@ -492,5 +537,11 @@ export class TrackView {
     this.bannerTex?.dispose();
     this.track.onFragileChange = null;
     this.track.onOrbChange = null;
+    this.track.onItemChange = null;
+    for (const m of this.itemMats.values()) {
+      m.map?.dispose();
+      m.dispose();
+    }
+    this.itemMats.clear();
   }
 }

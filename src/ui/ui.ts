@@ -9,6 +9,8 @@ import type { HudState, RunResult } from '../game/session';
 import { drawTile } from '../render/textures';
 import { STYLES, STYLE_ORDER, style, styleId } from '../render/style';
 import { drawRetroTile, retroBase } from '../render/retroTextures';
+import { ITEM_INFO, ITEM_ORDER, ItemKind, info as itemInfo } from '../core/items';
+import { itemIconUrl } from '../render/itemIcons';
 
 export interface UiActions {
   start(): void;
@@ -394,7 +396,7 @@ export class UI {
             <h3>CONTROLS</h3>
             <div class="keymap">${keys}</div>
             <div class="actions"><button class="btn small" data-act="resetkeys">Reset keys</button></div>
-            <p class="note">Click a key slot, then press the new key (Esc clears the slot). Gamepads: left stick / d-pad to steer, RT accelerate, LT brake, A jump, Start pause, Y restart.</p>
+            <p class="note">Click a key slot, then press the new key (Esc clears the slot). Gamepads: left stick / d-pad to steer, RT accelerate, LT brake, A jump, X or RB nitro, Start pause, Y restart.</p>
             ${seg('touchControls', 'Touch buttons', ['auto', 'on', 'off'])}
             <h3>DATA</h3>
             <p class="note">Progress is saved in this browser only. Nothing is sent anywhere.</p>
@@ -476,6 +478,10 @@ export class UI {
     const backFn = () => (from === 'pause' ? this.showPause() : this.showMainMenu());
     const k = this.save().settings.keys;
     const keyRow = (a: Action) => `<span>${k[a].filter(Boolean).map((c) => `<span class="kbd">${keyLabel(c)}</span>`).join(' ')}</span><span>${ACTION_LABELS[a]}</span>`;
+    const itemLegend = ITEM_ORDER.map((k) => {
+      const inf = itemInfo(k);
+      return `<div class="legend-item item"><img alt="" src="${itemIconUrl(k)}"><div><b style="color:${inf.color}">${inf.name.toUpperCase()}</b><span>${inf.description}</span></div></div>`;
+    }).join('');
     const legend = LEGEND_TILES.map((t) => `<div class="legend-item"><img alt="" src="${this.tileImg(t)}"><div><b style="color:${TILE_INFO[t].color}">${TILE_INFO[t].name.toUpperCase()}</b><span>${TILE_INFO[t].description}</span></div></div>`).join('');
     const layer = this.setScreen(
       `<div class="screen dim">
@@ -485,11 +491,12 @@ export class UI {
             <h3>GOAL</h3>
             <p class="note">Your ship flies forward on its own. Steer, manage your speed and jump the gaps to reach the finish gate of each sector. Falling off the road or hitting a wall costs a life; you respawn at the last checkpoint.</p>
             <h3>CONTROLS</h3>
-            <div class="controls-table">${(['left', 'right', 'accel', 'brake', 'jump', 'pause', 'restart'] as Action[]).map(keyRow).join('')}</div>
+            <div class="controls-table">${(['left', 'right', 'accel', 'brake', 'jump', 'nitro', 'pause', 'restart'] as Action[]).map(keyRow).join('')}</div>
             <h3>TIPS</h3>
             <p class="note">• Speed changes how far you jump: hold accelerate before long gaps.<br>• Low blocks can be jumped onto; tall walls must be steered around.<br>• Gold medals need the gold time and zero crashes.<br>• Risky side routes award bonus points.</p>
           </div>
-          <div class="panel"><h3>TRACK TILES</h3><div class="legend">${legend}</div></div>
+          <div class="panel"><h3>TRACK TILES</h3><div class="legend">${legend}</div>
+            <h3>POWER-UPS</h3><p class="note">Fly through the floating icons to collect them.</p><div class="legend">${itemLegend}</div></div>
         </div>
       </div>`,
       backFn,
@@ -531,6 +538,7 @@ export class UI {
       <div class="tbtn accel" data-touch="accel">${ICONS.up}</div>
       <div class="tbtn brake" data-touch="brake">${ICONS.down}</div>
       <div class="tbtn jump" data-touch="jump">JUMP</div>
+      <div class="tbtn nitro" data-touch="nitro">NITRO</div>
     </div>`;
   }
 
@@ -603,6 +611,11 @@ export class UI {
     if (c === 'ACCEL') return TILE_INFO[2].color;
     if (c === 'DRAG') return TILE_INFO[3].color;
     if (c === 'FRAGILE') return TILE_INFO[7].color;
+    if (c === 'SHIELD' || c === 'PHASE') return ITEM_INFO[ItemKind.Shield].color;
+    if (c.startsWith('MAGNET')) return ITEM_INFO[ItemKind.Magnet].color;
+    if (c.startsWith('2×')) return ITEM_INFO[ItemKind.Multiplier].color;
+    if (c.startsWith('WINGS')) return ITEM_INFO[ItemKind.Wings].color;
+    if (c.startsWith('NITRO')) return ITEM_INFO[ItemKind.Nitro].color;
     return '#2de2ff';
   }
 

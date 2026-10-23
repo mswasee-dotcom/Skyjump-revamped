@@ -81,10 +81,13 @@ export class Autopilot {
     const savedFS = t.fragileState.slice();
     const savedFT = t.fragileTimer.slice();
     const savedOrb = t.orbTaken.slice();
+    const savedItem = t.itemTaken.slice();
     const cbF = t.onFragileChange;
     const cbO = t.onOrbChange;
+    const cbI = t.onItemChange;
     t.onFragileChange = null;
     t.onOrbChange = null;
+    t.onItemChange = null;
 
     let best: Plan = this.plans[0];
     let bestScore = -Infinity;
@@ -103,9 +106,11 @@ export class Autopilot {
       t.fragileState.set(savedFS);
       t.fragileTimer.set(savedFT);
       t.orbTaken.set(savedOrb);
+      t.itemTaken.set(savedItem);
     }
     t.onFragileChange = cbF;
     t.onOrbChange = cbO;
+    t.onItemChange = cbI;
     return best.first;
   }
 

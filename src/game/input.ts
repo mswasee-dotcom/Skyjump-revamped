@@ -117,6 +117,8 @@ export class Input {
         this.padPrev.set(key, now);
       };
       edge(0, 'jump', 'confirm');
+      edge(2, 'nitro');
+      edge(5, 'nitro');
       edge(1, null, 'back');
       edge(9, 'pause');
       edge(3, 'restart');
